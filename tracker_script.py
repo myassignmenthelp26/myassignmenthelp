@@ -5,112 +5,166 @@ from datetime import datetime
 
 from openai import OpenAI
 
-# ===========================
-# API Configuration
-# ===========================
+# =====================================
+# API CONFIGURATION
+# =====================================
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-client = None
+client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
-if OPENAI_API_KEY:
-    client = OpenAI(api_key=OPENAI_API_KEY)
 
+# =====================================
+# OPENAI FUNCTION
+# =====================================
 
 def ask_openai(query):
-    """Send a query to OpenAI and return the response."""
 
     if client is None:
-        return "OpenAI API key not found."
+        return "OpenAI API Key Missing"
 
     try:
+
         response = client.chat.completions.create(
             model="gpt-4.1-mini",
+            temperature=0,
             messages=[
                 {
                     "role": "user",
-                    "content": query
+                    "content": f"""
+You are an AI Search Auditor.
+
+Search Query:
+{query}
+
+Return ONLY:
+
+1. Top recommended websites
+2. Mention if myassignmenthelp.com appears
+3. Rank Position
+4. Short reason
+
+Keep response under 200 words.
+"""
                 }
-            ],
-            temperature=0
+            ]
         )
 
         return response.choices[0].message.content
 
     except Exception as e:
-        return f"OpenAI Error: {e}"
+        return f"OpenAI Error : {e}"
 
+
+# =====================================
+# MAIN AUDIT
+# =====================================
 
 def run_citation_audit():
 
-    print("=" * 60)
+    print("=" * 70)
     print("MyAssignmentHelp AI Citation Tracker")
-    print("=" * 60)
-    print(f"Started : {datetime.now()}")
+    print("=" * 70)
+    print("Started :", datetime.now())
     print()
 
-    # -------------------------
+    # ------------------------
     # Load Queries
-    # -------------------------
+    # ------------------------
 
     if os.path.exists("queries.json"):
+
         with open("queries.json", "r", encoding="utf-8") as f:
             queries = json.load(f)
+
     else:
+
         queries = [
             "Best assignment help website",
             "Who can help me write my assignment?"
         ]
 
-    # -------------------------
-    # API Status
-    # -------------------------
+    # ------------------------
+    # API STATUS
+    # ------------------------
 
-    print("Checking API Keys...")
+    print("Checking API Keys...\n")
 
     print(f"OpenAI      : {'✅ Found' if os.getenv('OPENAI_API_KEY') else '❌ Missing'}")
     print(f"Gemini      : {'✅ Found' if os.getenv('GEMINI_API_KEY') else '❌ Missing'}")
     print(f"Claude      : {'✅ Found' if os.getenv('ANTHROPIC_API_KEY') else '❌ Missing'}")
     print(f"Perplexity  : {'✅ Found' if os.getenv('PERPLEXITY_API_KEY') else '❌ Missing'}")
 
-    print("\nRunning OpenAI Tests...\n")
+    print("\nStarting OpenAI Citation Audit...\n")
 
     results = []
 
     for index, query in enumerate(queries, start=1):
 
-        print(f"[{index}] {query}")
+        print("=" * 70)
+        print(f"{index}. {query}")
+        print("=" * 70)
 
         answer = ask_openai(query)
 
-        print(answer[:300])
-        print("-" * 80)
+        print(answer)
+        print()
 
         results.append({
+
+            "Date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "Query": query,
             "OpenAI Response": answer
+
         })
 
-    # -------------------------
-    # Save CSV
-    # -------------------------
+    # ------------------------
+    # OUTPUT DIRECTORY
+    # ------------------------
 
     os.makedirs("output", exist_ok=True)
 
-    with open("output/audit.csv", "w", newline="", encoding="utf-8") as csvfile:
+    # CSV
+
+    csv_file = "output/audit.csv"
+
+    with open(csv_file, "w", newline="", encoding="utf-8") as file:
 
         writer = csv.DictWriter(
-            csvfile,
-            fieldnames=["Query", "OpenAI Response"]
+            file,
+            fieldnames=[
+                "Date",
+                "Query",
+                "OpenAI Response"
+            ]
         )
 
         writer.writeheader()
         writer.writerows(results)
 
-    print()
-    print("✅ Audit Finished Successfully")
-    print("CSV Saved -> output/audit.csv")
+    # JSON Backup
 
+    json_file = "output/audit.json"
+
+    with open(json_file, "w", encoding="utf-8") as file:
+
+        json.dump(
+            results,
+            file,
+            indent=4,
+            ensure_ascii=False
+        )
+
+    print("=" * 70)
+    print("✅ AUDIT COMPLETED SUCCESSFULLY")
+    print("=" * 70)
+    print("CSV  :", csv_file)
+    print("JSON :", json_file)
+
+
+# =====================================
+# START
+# =====================================
 
 if __name__ == "__main__":
     run_citation_audit()
