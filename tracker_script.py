@@ -1,4 +1,3 @@
-raise Exception("VERSION_4_TEST")
 import os
 import json
 import csv
