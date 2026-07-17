@@ -1,5 +1,6 @@
 openai>=1.50.0
 google-genai
+anthropic
 requests
 pandas
 python-dotenv
