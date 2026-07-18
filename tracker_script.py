@@ -5,6 +5,7 @@ import openai
 from datetime import datetime
 from openai import OpenAI
 
+from engines.openai_engine import ask_openai
 try:
     from google import genai
 except ImportError:
@@ -85,31 +86,7 @@ def find_mentioned_competitors(answer_text, competitors):
 # OPENAI FUNCTION
 # ==================================================
 
-def ask_openai(query):
 
-    if openai_client is None:
-        return "❌ OpenAI API Key Missing"
-
-    print("➡️ Sending request to OpenAI...")
-
-    try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4.1-mini",
-            temperature=0,
-            messages=[
-                {"role": "user", "content": AUDIT_PROMPT_TEMPLATE.format(query=query)}
-            ]
-        )
-
-        answer = response.choices[0].message.content
-
-        print("✅ Response received from OpenAI")
-
-        return answer
-
-    except Exception as e:
-        print("❌ OpenAI Error:", str(e))
-        return f"OpenAI Error: {str(e)}"
 
 
 # ==================================================
@@ -265,7 +242,11 @@ def run_citation_audit():
         print(f"{index}. {query}")
         print("=" * 70)
 
-        openai_answer = ask_openai(query)
+        openai_answer = ask_openai(
+    query,
+    openai_client,
+    AUDIT_PROMPT_TEMPLATE
+)
         print(openai_answer)
         print()
 
