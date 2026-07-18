@@ -2,39 +2,46 @@ name: LLM Citation Tracking Loop
 
 on:
   workflow_dispatch:
+
   schedule:
+    # Every Monday at 00:00 UTC
     - cron: "0 0 * * 1"
 
 jobs:
   run-audit:
+    name: Run AI Citation Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
+          cache: "pip"
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Execute AI Citation Tracker
+      - name: Run Citation Tracker
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: python tracker_script.py
+        run: |
+          python tracker_script.py
 
-      - name: Upload Audit Report
+      - name: Upload Audit Reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ai-citation-report
           path: output/
           if-no-files-found: warn
+          retention-days: 30
