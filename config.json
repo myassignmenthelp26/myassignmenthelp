@@ -1,0 +1,11 @@
+{
+    "engines": {
+        "openai": false,
+        "gemini": true,
+        "claude": false,
+        "perplexity": false
+    },
+    "save_csv": true,
+    "save_json": true,
+    "save_competitor_summary": true
+}
