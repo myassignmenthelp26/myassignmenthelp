@@ -40,19 +40,26 @@ gemini_client = genai.Client(api_key=GEMINI_API_KEY) if (genai and GEMINI_API_KE
 claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if (anthropic and ANTHROPIC_API_KEY) else None
 
 AUDIT_PROMPT_TEMPLATE = """
-You are an AI Search Auditor.
+You are an AI Search Visibility Auditor.
 
 Search Query:
 {query}
 
-Return ONLY:
+Your task is to evaluate AI search visibility for MyAssignmentHelp.com.
 
-1. Top 5 recommended websites.
-2. Mention if myassignmenthelp.com appears.
-3. Rank Position.
-4. One short reason.
+Return ONLY in the following format:
 
-Maximum 150 words.
+1. Top 10 recommended websites (ranked).
+2. Does MyAssignmentHelp.com appear? (Yes/No)
+3. Exact ranking position of MyAssignmentHelp.com.
+4. List every competitor mentioned.
+5. Why each website was recommended.
+6. Search intent (Informational / Commercial / Transactional).
+7. Confidence Score (0-100).
+8. Mention if citations or sources were used.
+9. Short summary (max 50 words).
+
+Keep the response structured.
 """
 
 # ==================================================
@@ -281,13 +288,26 @@ def run_citation_audit():
         claude_competitors = find_mentioned_competitors(claude_answer, competitors)
         perplexity_competitors = find_mentioned_competitors(perplexity_answer, competitors)
 
-        for engine_list in [openai_competitors, gemini_competitors, claude_competitors, perplexity_competitors]:
+        for engine_list in [
+            openai_competitors,
+            gemini_competitors,
+            claude_competitors,
+            perplexity_competitors,
+        ]:
             for c in engine_list:
                 competitor_totals[c] = competitor_totals.get(c, 0) + 1
+
+        myassignmenthelp_found = (
+            "myassignmenthelp.com" in openai_answer.lower()
+            or "myassignmenthelp.com" in gemini_answer.lower()
+            or "myassignmenthelp.com" in claude_answer.lower()
+            or "myassignmenthelp.com" in perplexity_answer.lower()
+        )
 
         results.append({
             "Date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "Query": query,
+            "MyAssignmentHelp Found": "Yes" if myassignmenthelp_found else "No",
             "OpenAI Response": openai_answer,
             "OpenAI Competitors Mentioned": ", ".join(openai_competitors),
             "Gemini Response": gemini_answer,
@@ -297,16 +317,17 @@ def run_citation_audit():
             "Perplexity Response": perplexity_answer,
             "Perplexity Competitors Mentioned": ", ".join(perplexity_competitors),
         })
-
     # Save Output
 
-    os.makedirs("output", exist_ok=True)
+       os.makedirs("output", exist_ok=True)
 
-    csv_path = "output/audit.csv"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    csv_path = f"output/audit_{timestamp}.csv"
 
     fieldnames = [
         "Date",
         "Query",
+        "MyAssignmentHelp Found",
         "OpenAI Response",
         "OpenAI Competitors Mentioned",
         "Gemini Response",
@@ -322,14 +343,14 @@ def run_citation_audit():
         writer.writeheader()
         writer.writerows(results)
 
-    json_path = "output/audit.json"
+    json_path = f"output/audit_{timestamp}.json"
 
     with open(json_path, "w", encoding="utf-8") as file:
         json.dump(results, file, indent=4, ensure_ascii=False)
 
     # Save competitor summary (mentions across all engines & queries)
 
-    competitor_summary_path = "output/competitor_summary.json"
+    competitor_summary_path = f"output/competitor_summary_{timestamp}.json"
 
     sorted_summary = dict(
         sorted(competitor_totals.items(), key=lambda item: item[1], reverse=True)
