@@ -317,9 +317,10 @@ def run_citation_audit():
             "Perplexity Response": perplexity_answer,
             "Perplexity Competitors Mentioned": ", ".join(perplexity_competitors),
         })
+
     # Save Output
 
-       os.makedirs("output", exist_ok=True)
+    os.makedirs("output", exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_path = f"output/audit_{timestamp}.csv"
